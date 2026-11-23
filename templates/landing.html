@@ -2,6 +2,91 @@
 
 {% block title %}Spendly — Track Every Rupee{% endblock %}
 
+{% block head %}
+<style>
+    /* Video Modal Styles */
+    .modal-overlay {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(15, 15, 15, 0.75);
+        backdrop-filter: blur(4px);
+        display: none;
+        align-items: center;
+        justify-content: center;
+        z-index: 1000;
+        padding: 1rem;
+        box-sizing: border-box;
+    }
+    .modal-overlay.active {
+        display: flex;
+    }
+    .modal-container {
+        background: #0f0f0f;
+        border-radius: var(--radius-md, 12px);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        width: 100%;
+        max-width: 800px;
+        box-shadow: 0 20px 40px rgba(0, 0, 0, 0.5);
+        overflow: hidden;
+        position: relative;
+        animation: modalScaleUp 0.2s ease-out;
+    }
+    @keyframes modalScaleUp {
+        from { transform: scale(0.96); opacity: 0; }
+        to { transform: scale(1); opacity: 1; }
+    }
+    .modal-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 0.85rem 1.25rem;
+        background: #171717;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    }
+    .modal-title {
+        color: #f7f6f3;
+        font-size: 0.95rem;
+        font-weight: 500;
+        margin: 0;
+    }
+    .modal-close-btn {
+        background: transparent;
+        border: none;
+        color: #a0a0a0;
+        font-size: 1.5rem;
+        line-height: 1;
+        cursor: pointer;
+        padding: 0 0.25rem;
+        transition: color 0.15s ease;
+    }
+    .modal-close-btn:hover {
+        color: #ffffff;
+    }
+    .modal-video-wrapper {
+        position: relative;
+        padding-bottom: 56.25%; /* 16:9 Aspect Ratio */
+        height: 0;
+        overflow: hidden;
+        background: #000;
+    }
+    .modal-video-wrapper iframe {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        border: 0;
+    }
+    #openModalBtn {
+        cursor: pointer;
+        font-family: inherit;
+    }
+</style>
+{% endblock %}
+
 {% block content %}
 
 <section class="hero">
@@ -18,6 +103,7 @@
         </p>
         <div class="hero-actions">
             <a href="{{ url_for('register') }}" class="btn-primary">Start tracking free</a>
+            <button type="button" id="openModalBtn" class="btn-ghost">See how it works</button>
             <a href="{{ url_for('login') }}" class="btn-ghost">Sign in</a>
         </div>
     </div>
@@ -89,4 +175,84 @@
     </div>
 </section>
 
+<!-- Video Modal -->
+<div id="videoModal" class="modal-overlay" aria-hidden="true" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+    <div class="modal-container">
+        <div class="modal-header">
+            <h3 id="modalTitle" class="modal-title">See how it works</h3>
+            <button type="button" id="closeModalBtn" class="modal-close-btn" aria-label="Close modal">&times;</button>
+        </div>
+        <div class="modal-video-wrapper">
+            <iframe id="videoIframe"
+                    src="https://www.youtube.com/embed/dQw4w9WgXcQ?enablejsapi=1"
+                    title="Spendly demo video"
+                    frameborder="0"
+                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                    allowfullscreen>
+            </iframe>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+    (function () {
+        const modal = document.getElementById('videoModal');
+        const openBtn = document.getElementById('openModalBtn');
+        const closeBtn = document.getElementById('closeModalBtn');
+        const iframe = document.getElementById('videoIframe');
+        const defaultVideoSrc = iframe ? iframe.getAttribute('src') : '';
+
+        function openModal() {
+            if (iframe && !iframe.getAttribute('src')) {
+                iframe.setAttribute('src', defaultVideoSrc);
+            }
+            modal.classList.add('active');
+            modal.setAttribute('aria-hidden', 'false');
+            document.body.style.overflow = 'hidden';
+        }
+
+        function closeModal() {
+            modal.classList.remove('active');
+            modal.setAttribute('aria-hidden', 'true');
+            document.body.style.overflow = '';
+            // Stop video playing by unloading iframe src
+            if (iframe) {
+                iframe.setAttribute('src', '');
+            }
+        }
+
+        if (openBtn) {
+            openBtn.addEventListener('click', function (e) {
+                e.preventDefault();
+                openModal();
+            });
+        }
+
+        if (closeBtn) {
+            closeBtn.addEventListener('click', function (e) {
+                e.preventDefault();
+                closeModal();
+            });
+        }
+
+        // Close on clicking outside the modal container (on overlay background)
+        if (modal) {
+            modal.addEventListener('click', function (e) {
+                if (e.target === modal) {
+                    closeModal();
+                }
+            });
+        }
+
+        // Close on Escape key press
+        document.addEventListener('keydown', function (e) {
+            if (e.key === 'Escape' && modal && modal.classList.contains('active')) {
+                closeModal();
+            }
+        });
+    })();
+</script>
 {% endblock %}
