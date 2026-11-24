@@ -5,7 +5,7 @@ from werkzeug.security import generate_password_hash
 
 # Path to the SQLite database file in the project root
 BASE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
-DATABASE_NAME = os.environ.get("DATABASE_NAME", "expense_tracker.db")
+DATABASE_NAME = os.environ.get("DATABASE_NAME", "spendly.db")
 DB_PATH = os.environ.get("DATABASE_PATH", os.path.join(BASE_DIR, DATABASE_NAME))
 
 CATEGORIES = [
@@ -29,6 +29,29 @@ def get_db():
     conn.row_factory = sqlite3.Row
     conn.execute("PRAGMA foreign_keys = ON;")
     return conn
+
+
+def create_user(name, email, password):
+    """
+    Hashes the password with werkzeug, inserts a new row into the 'users' table,
+    and returns the new user's id.
+    Raises sqlite3.IntegrityError if the email is already taken (UNIQUE constraint).
+    """
+    password_hash = generate_password_hash(password)
+    conn = get_db()
+    cursor = conn.cursor()
+    try:
+        cursor.execute(
+            """
+            INSERT INTO users (name, email, password_hash)
+            VALUES (?, ?, ?)
+            """,
+            (name, email, password_hash),
+        )
+        conn.commit()
+        return cursor.lastrowid
+    finally:
+        conn.close()
 
 
 def init_db():

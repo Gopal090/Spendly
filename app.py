@@ -1,7 +1,9 @@
-from flask import Flask, render_template
-from database.db import get_db, init_db, seed_db
+import sqlite3
+from flask import Flask, render_template, request, redirect, url_for, flash, abort
+from database.db import get_db, init_db, seed_db, create_user
 
 app = Flask(__name__)
+app.secret_key = "spendly-dev-secret-key"
 
 # Initialize and seed database on startup
 with app.app_context():
@@ -18,9 +20,39 @@ def landing():
     return render_template("landing.html")
 
 
-@app.route("/register")
+@app.route("/register", methods=["GET", "POST"])
 def register():
-    return render_template("register.html")
+    if request.method == "GET":
+        return render_template("register.html")
+
+    if request.method == "POST":
+        name = request.form.get("name", "").strip()
+        email = request.form.get("email", "").strip()
+        password = request.form.get("password", "")
+        confirm_password = request.form.get("confirm_password", "")
+
+        # 1. Server-side validation: All fields are non-empty
+        if not name or not email or not password or not confirm_password:
+            flash("All fields are required", "error")
+            return render_template("register.html", name=name, email=email)
+
+        # 2. Server-side validation: password == confirm_password
+        if password != confirm_password:
+            flash("Passwords do not match", "error")
+            return render_template("register.html", name=name, email=email)
+
+        # 3. Create user, catching unique email violation
+        try:
+            create_user(name, email, password)
+        except sqlite3.IntegrityError:
+            flash("Email already registered", "error")
+            return render_template("register.html", name=name, email=email)
+
+        # On success, flash message and redirect to login
+        flash("Account created successfully! Please sign in.", "success")
+        return redirect(url_for("login"))
+
+    abort(405)
 
 
 @app.route("/login")
