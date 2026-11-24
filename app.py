@@ -1,5 +1,6 @@
 import sqlite3
-from flask import Flask, render_template, request, redirect, url_for, flash, abort
+from flask import Flask, render_template, request, redirect, url_for, flash, abort, session
+from werkzeug.security import check_password_hash
 from database.db import get_db, init_db, seed_db, create_user
 
 app = Flask(__name__)
@@ -55,8 +56,30 @@ def register():
     abort(405)
 
 
-@app.route("/login")
+@app.route("/login", methods=["GET", "POST"])
 def login():
+    if request.method == "POST":
+        email = request.form.get("email", "").strip()
+        password = request.form.get("password", "")
+
+        if not email or not password:
+            flash("All fields are required", "error")
+            return render_template("login.html", email=email)
+
+        conn = get_db()
+        user = conn.execute("SELECT * FROM users WHERE email = ?", (email,)).fetchone()
+        conn.close()
+
+        if user and check_password_hash(user["password_hash"], password):
+            session["user_id"] = user["id"]
+            session["user_name"] = user["name"]
+            session["user_email"] = user["email"]
+            flash("Welcome back!", "success")
+            return redirect(url_for("profile"))
+
+        flash("Invalid email or password", "error")
+        return render_template("login.html", email=email)
+
     return render_template("login.html")
 
 
@@ -71,17 +94,89 @@ def privacy():
 
 
 # ------------------------------------------------------------------ #
-# Placeholder routes — students will implement these                  #
+# Routes                                                              #
 # ------------------------------------------------------------------ #
 
 @app.route("/logout")
 def logout():
-    return "Logout — coming in Step 3"
+    session.clear()
+    flash("You have been logged out.", "success")
+    return redirect(url_for("login"))
 
 
 @app.route("/profile")
 def profile():
-    return "Profile page — coming in Step 4"
+    # Authentication guard: check session.get("user_id")
+    if not session.get("user_id"):
+        return redirect(url_for("login"))
+
+    # Hardcoded profile data as per spec
+    user_name = session.get("user_name", "Nitish Kumar")
+    user_email = session.get("user_email", "nitish@example.com")
+    name_parts = user_name.split()
+    initials = "".join([part[0].upper() for part in name_parts[:2]]) if name_parts else "NK"
+
+    user_info = {
+        "name": user_name,
+        "email": user_email,
+        "initials": initials,
+        "member_since": "March 2026",
+    }
+
+    stats = {
+        "total_spent": 12450.00,
+        "transaction_count": 28,
+        "top_category": "Food",
+    }
+
+    transactions = [
+        {
+            "date": "2026-03-24",
+            "description": "Weekly grocery run at Whole Foods",
+            "category": "Food",
+            "amount": 2450.00,
+        },
+        {
+            "date": "2026-03-22",
+            "description": "Monthly fiber broadband internet",
+            "category": "Bills",
+            "amount": 1200.00,
+        },
+        {
+            "date": "2026-03-20",
+            "description": "Metro & public transit card recharge",
+            "category": "Transport",
+            "amount": 800.00,
+        },
+        {
+            "date": "2026-03-18",
+            "description": "Annual health checkup and medicine",
+            "category": "Health",
+            "amount": 3100.00,
+        },
+        {
+            "date": "2026-03-15",
+            "description": "Weekend movie tickets and popcorn",
+            "category": "Entertainment",
+            "amount": 950.00,
+        },
+    ]
+
+    category_breakdown = [
+        {"category": "Food", "amount": 4200.00, "percentage": 34},
+        {"category": "Bills", "amount": 3200.00, "percentage": 26},
+        {"category": "Health", "amount": 3100.00, "percentage": 25},
+        {"category": "Transport", "amount": 1000.00, "percentage": 8},
+        {"category": "Entertainment", "amount": 950.00, "percentage": 7},
+    ]
+
+    return render_template(
+        "profile.html",
+        user=user_info,
+        stats=stats,
+        transactions=transactions,
+        categories=category_breakdown,
+    )
 
 
 @app.route("/expenses/add")
