@@ -41,6 +41,7 @@
         <div class="section-card">
             <div class="section-title">
                 <h2>Recent Transactions</h2>
+                <a href="{{ url_for('add_expense') }}" class="btn-primary btn-sm">+ Add expense</a>
             </div>
             <div class="table-responsive">
                 <table class="transactions-table">
@@ -64,7 +65,9 @@
                         </tr>
                         {% else %}
                         <tr>
-                            <td colspan="4" class="empty-state-cell">No transactions logged yet.</td>
+                            <td colspan="4" class="empty-state-cell">
+                                No transactions logged yet. <a href="{{ url_for('add_expense') }}" class="link-accent">Add your first expense</a>
+                            </td>
                         </tr>
                         {% endfor %}
                     </tbody>

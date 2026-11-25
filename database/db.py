@@ -248,3 +248,25 @@ def get_user_category_breakdown(user_id):
         return breakdown
     finally:
         conn.close()
+
+
+def add_user_expense(user_id, amount, category, date, description=None):
+    """
+    Inserts a new expense row for the given user_id.
+    amount is stored as a float (REAL).
+    Returns the newly created expense id.
+    """
+    conn = get_db()
+    cursor = conn.cursor()
+    try:
+        cursor.execute(
+            """
+            INSERT INTO expenses (user_id, amount, category, date, description)
+            VALUES (?, ?, ?, ?, ?)
+            """,
+            (user_id, float(amount), category, date, description or None),
+        )
+        conn.commit()
+        return cursor.lastrowid
+    finally:
+        conn.close()

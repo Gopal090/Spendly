@@ -11,6 +11,8 @@ from database.db import (
     get_user_expenses,
     get_user_stats,
     get_user_category_breakdown,
+    add_user_expense,
+    CATEGORIES,
 )
 
 app = Flask(__name__)
@@ -160,9 +162,72 @@ def profile():
     )
 
 
-@app.route("/expenses/add")
+@app.route("/expenses/add", methods=["GET", "POST"])
 def add_expense():
-    return "Add expense — coming in Step 7"
+    user_id = session.get("user_id")
+    if not user_id:
+        return redirect(url_for("login"))
+
+    today_str = datetime.now().strftime("%Y-%m-%d")
+
+    if request.method == "POST":
+        amount_raw = request.form.get("amount", "").strip()
+        category = request.form.get("category", "").strip()
+        date_str = request.form.get("date", "").strip()
+        description = request.form.get("description", "").strip()
+
+        # Validation: amount
+        try:
+            amount = float(amount_raw)
+            if amount <= 0:
+                raise ValueError("Amount must be positive")
+        except (ValueError, TypeError):
+            flash("Please enter a valid positive amount.", "error")
+            return render_template(
+                "add_expense.html",
+                categories=CATEGORIES,
+                today=today_str,
+                amount=amount_raw,
+                category=category,
+                date=date_str,
+                description=description,
+            )
+
+        # Validation: category
+        if category not in CATEGORIES:
+            flash("Please select a valid category.", "error")
+            return render_template(
+                "add_expense.html",
+                categories=CATEGORIES,
+                today=today_str,
+                amount=amount_raw,
+                category=category,
+                date=date_str,
+                description=description,
+            )
+
+        # Validation: date
+        if not date_str:
+            flash("Please enter a valid date.", "error")
+            return render_template(
+                "add_expense.html",
+                categories=CATEGORIES,
+                today=today_str,
+                amount=amount_raw,
+                category=category,
+                date=date_str,
+                description=description,
+            )
+
+        add_user_expense(user_id, amount, category, date_str, description)
+        flash("Expense added successfully!", "success")
+        return redirect(url_for("profile"))
+
+    return render_template(
+        "add_expense.html",
+        categories=CATEGORIES,
+        today=today_str,
+    )
 
 
 @app.route("/expenses/<int:id>/edit")
