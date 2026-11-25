@@ -137,3 +137,114 @@ def seed_db():
 
     conn.commit()
     conn.close()
+
+
+def get_user_by_id(user_id):
+    """
+    Fetches a user record by user_id.
+    Returns a dict with user fields or None if not found.
+    """
+    conn = get_db()
+    cursor = conn.cursor()
+    try:
+        user = cursor.execute(
+            "SELECT id, name, email, created_at FROM users WHERE id = ?",
+            (user_id,),
+        ).fetchone()
+        if user:
+            return dict(user)
+        return None
+    finally:
+        conn.close()
+
+
+def get_user_expenses(user_id, limit=None):
+    """
+    Fetches all expenses for a user ordered by date DESC, id DESC.
+    Optionally limits the number of results.
+    """
+    conn = get_db()
+    cursor = conn.cursor()
+    try:
+        query = (
+            "SELECT id, user_id, amount, category, date, description, created_at "
+            "FROM expenses WHERE user_id = ? ORDER BY date DESC, id DESC"
+        )
+        params = [user_id]
+        if limit is not None:
+            query += " LIMIT ?"
+            params.append(limit)
+        rows = cursor.execute(query, params).fetchall()
+        return [dict(row) for row in rows]
+    finally:
+        conn.close()
+
+
+def get_user_stats(user_id):
+    """
+    Computes summary statistics for a user from live database rows:
+    - total_spent (float): sum of all expenses
+    - transaction_count (int): total number of expenses
+    - top_category (str): category with the highest total spend (or 'None' if empty)
+    """
+    conn = get_db()
+    cursor = conn.cursor()
+    try:
+        # Total spent & transaction count
+        total_row = cursor.execute(
+            "SELECT COALESCE(SUM(amount), 0.0) AS total_spent, COUNT(*) AS count FROM expenses WHERE user_id = ?",
+            (user_id,),
+        ).fetchone()
+        total_spent = float(total_row["total_spent"]) if total_row else 0.0
+        transaction_count = int(total_row["count"]) if total_row else 0
+
+        # Top category by expenditure
+        top_cat_row = cursor.execute(
+            "SELECT category, SUM(amount) AS cat_total FROM expenses WHERE user_id = ? "
+            "GROUP BY category ORDER BY cat_total DESC LIMIT 1",
+            (user_id,),
+        ).fetchone()
+        top_category = top_cat_row["category"] if top_cat_row else "None"
+
+        return {
+            "total_spent": total_spent,
+            "transaction_count": transaction_count,
+            "top_category": top_category,
+        }
+    finally:
+        conn.close()
+
+
+def get_user_category_breakdown(user_id):
+    """
+    Computes category breakdown for a user:
+    Returns list of dicts: [{'category': str, 'amount': float, 'percentage': int}]
+    ordered by total spend DESC.
+    """
+    conn = get_db()
+    cursor = conn.cursor()
+    try:
+        total_row = cursor.execute(
+            "SELECT COALESCE(SUM(amount), 0.0) AS total FROM expenses WHERE user_id = ?",
+            (user_id,),
+        ).fetchone()
+        total_spent = float(total_row["total"]) if total_row else 0.0
+
+        rows = cursor.execute(
+            "SELECT category, SUM(amount) AS amount FROM expenses WHERE user_id = ? "
+            "GROUP BY category ORDER BY amount DESC",
+            (user_id,),
+        ).fetchall()
+
+        breakdown = []
+        for row in rows:
+            amt = float(row["amount"])
+            pct = round((amt / total_spent) * 100) if total_spent > 0 else 0
+            breakdown.append({
+                "category": row["category"],
+                "amount": amt,
+                "percentage": pct,
+            })
+        return breakdown
+    finally:
+        conn.close()

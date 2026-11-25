@@ -1,7 +1,17 @@
 import sqlite3
+from datetime import datetime
 from flask import Flask, render_template, request, redirect, url_for, flash, abort, session
 from werkzeug.security import check_password_hash
-from database.db import get_db, init_db, seed_db, create_user
+from database.db import (
+    get_db,
+    init_db,
+    seed_db,
+    create_user,
+    get_user_by_id,
+    get_user_expenses,
+    get_user_stats,
+    get_user_category_breakdown,
+)
 
 app = Flask(__name__)
 app.secret_key = "spendly-dev-secret-key"
@@ -107,75 +117,46 @@ def logout():
 @app.route("/profile")
 def profile():
     # Authentication guard: check session.get("user_id")
-    if not session.get("user_id"):
+    user_id = session.get("user_id")
+    if not user_id:
         return redirect(url_for("login"))
 
-    # Hardcoded profile data as per spec
-    user_name = session.get("user_name", "Nitish Kumar")
-    user_email = session.get("user_email", "nitish@example.com")
+    # Live query: fetch authenticated user from database
+    user_db = get_user_by_id(user_id)
+    if not user_db:
+        session.clear()
+        return redirect(url_for("login"))
+
+    user_name = user_db["name"]
+    user_email = user_db["email"]
     name_parts = user_name.split()
-    initials = "".join([part[0].upper() for part in name_parts[:2]]) if name_parts else "NK"
+    initials = "".join([part[0].upper() for part in name_parts[:2]]) if name_parts else "U"
+
+    created_at_raw = user_db.get("created_at") or ""
+    try:
+        dt = datetime.strptime(created_at_raw[:10], "%Y-%m-%d")
+        member_since = dt.strftime("%B %Y")
+    except Exception:
+        member_since = "March 2026"
 
     user_info = {
         "name": user_name,
         "email": user_email,
         "initials": initials,
-        "member_since": "March 2026",
+        "member_since": member_since,
     }
 
-    stats = {
-        "total_spent": 12450.00,
-        "transaction_count": 28,
-        "top_category": "Food",
-    }
-
-    transactions = [
-        {
-            "date": "2026-03-24",
-            "description": "Weekly grocery run at Whole Foods",
-            "category": "Food",
-            "amount": 2450.00,
-        },
-        {
-            "date": "2026-03-22",
-            "description": "Monthly fiber broadband internet",
-            "category": "Bills",
-            "amount": 1200.00,
-        },
-        {
-            "date": "2026-03-20",
-            "description": "Metro & public transit card recharge",
-            "category": "Transport",
-            "amount": 800.00,
-        },
-        {
-            "date": "2026-03-18",
-            "description": "Annual health checkup and medicine",
-            "category": "Health",
-            "amount": 3100.00,
-        },
-        {
-            "date": "2026-03-15",
-            "description": "Weekend movie tickets and popcorn",
-            "category": "Entertainment",
-            "amount": 950.00,
-        },
-    ]
-
-    category_breakdown = [
-        {"category": "Food", "amount": 4200.00, "percentage": 34},
-        {"category": "Bills", "amount": 3200.00, "percentage": 26},
-        {"category": "Health", "amount": 3100.00, "percentage": 25},
-        {"category": "Transport", "amount": 1000.00, "percentage": 8},
-        {"category": "Entertainment", "amount": 950.00, "percentage": 7},
-    ]
+    # Live queries for stats, expenses, and category breakdown
+    stats = get_user_stats(user_id)
+    transactions = get_user_expenses(user_id)
+    categories = get_user_category_breakdown(user_id)
 
     return render_template(
         "profile.html",
         user=user_info,
         stats=stats,
         transactions=transactions,
-        categories=category_breakdown,
+        categories=categories,
     )
 
 

@@ -789,6 +789,21 @@ a { color: inherit; text-decoration: none; }
 .progress-shopping { width: 12%; background: var(--cat-shopping); }
 .progress-other { width: 6%; background: var(--cat-other); }
 
+.empty-state-cell {
+    text-align: center;
+    color: var(--ink-faint);
+    padding: 2rem 1rem;
+    font-style: italic;
+}
+
+.empty-state-text {
+    color: var(--ink-faint);
+    font-size: 0.9rem;
+    font-style: italic;
+    text-align: center;
+    padding: 1.5rem 0;
+}
+
 @media (max-width: 900px) {
     .profile-content-grid {
         grid-template-columns: 1fr;

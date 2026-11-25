@@ -56,11 +56,15 @@
                         {% for tx in transactions %}
                         <tr>
                             <td>{{ tx.date }}</td>
-                            <td>{{ tx.description }}</td>
+                            <td>{{ tx.description or 'No description' }}</td>
                             <td>
                                 <span class="category-badge badge-{{ tx.category|lower }}">{{ tx.category }}</span>
                             </td>
                             <td class="tx-amount">₹{{ "%.2f"|format(tx.amount) }}</td>
+                        </tr>
+                        {% else %}
+                        <tr>
+                            <td colspan="4" class="empty-state-cell">No transactions logged yet.</td>
                         </tr>
                         {% endfor %}
                     </tbody>
@@ -84,6 +88,8 @@
                         <div class="category-progress-bar progress-{{ cat.category|lower }}"></div>
                     </div>
                 </div>
+                {% else %}
+                <p class="empty-state-text">No category spending recorded yet.</p>
                 {% endfor %}
             </div>
         </div>
