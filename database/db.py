@@ -270,3 +270,22 @@ def add_user_expense(user_id, amount, category, date, description=None):
         return cursor.lastrowid
     finally:
         conn.close()
+
+
+def delete_user_expense(expense_id, user_id):
+    """
+    Deletes an expense row matching expense_id and user_id.
+    Ensures users can only delete their own expenses.
+    Returns True if a row was deleted, False otherwise.
+    """
+    conn = get_db()
+    cursor = conn.cursor()
+    try:
+        cursor.execute(
+            "DELETE FROM expenses WHERE id = ? AND user_id = ?",
+            (expense_id, user_id),
+        )
+        conn.commit()
+        return cursor.rowcount > 0
+    finally:
+        conn.close()

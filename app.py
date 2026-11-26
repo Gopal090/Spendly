@@ -12,6 +12,7 @@ from database.db import (
     get_user_stats,
     get_user_category_breakdown,
     add_user_expense,
+    delete_user_expense,
     CATEGORIES,
 )
 
@@ -235,9 +236,19 @@ def edit_expense(id):
     return "Edit expense — coming in Step 8"
 
 
-@app.route("/expenses/<int:id>/delete")
+@app.route("/expenses/<int:id>/delete", methods=["GET", "POST"])
 def delete_expense(id):
-    return "Delete expense — coming in Step 9"
+    user_id = session.get("user_id")
+    if not user_id:
+        return redirect(url_for("login"))
+
+    deleted = delete_user_expense(id, user_id)
+    if deleted:
+        flash("Expense deleted successfully.", "success")
+    else:
+        flash("Expense not found or unauthorized.", "error")
+
+    return redirect(url_for("profile"))
 
 
 if __name__ == "__main__":

@@ -5,6 +5,14 @@
 {% block content %}
 <div class="profile-container">
 
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            {% for category, message in messages %}
+            <div class="{% if category == 'success' %}auth-success{% else %}auth-error{% endif %}">{{ message }}</div>
+            {% endfor %}
+        {% endif %}
+    {% endwith %}
+
     <!-- 1. User Info Card -->
     <div class="user-card">
         <div class="user-avatar">{{ user.initials }}</div>
@@ -51,6 +59,7 @@
                             <th>Description</th>
                             <th>Category</th>
                             <th class="th-amount">Amount</th>
+                            <th class="th-actions">Action</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -62,10 +71,15 @@
                                 <span class="category-badge badge-{{ tx.category|lower }}">{{ tx.category }}</span>
                             </td>
                             <td class="tx-amount">₹{{ "%.2f"|format(tx.amount) }}</td>
+                            <td class="tx-actions">
+                                <form method="post" action="{{ url_for('delete_expense', id=tx.id) }}" class="inline-form" onsubmit="return confirm('Delete this expense?');">
+                                    <button type="submit" class="btn-delete" title="Delete expense" aria-label="Delete expense">✕</button>
+                                </form>
+                            </td>
                         </tr>
                         {% else %}
                         <tr>
-                            <td colspan="4" class="empty-state-cell">
+                            <td colspan="5" class="empty-state-cell">
                                 No transactions logged yet. <a href="{{ url_for('add_expense') }}" class="link-accent">Add your first expense</a>
                             </td>
                         </tr>
